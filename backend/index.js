@@ -6,13 +6,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// === IMPORTAR RUTAS ORDENADAS ===
+
 const rutasClientes = require('./routes/clientes');
 
-// === USAR LAS RUTAS ===
+
 app.use('/api/clientes', rutasClientes);
 
-// Ruta base de prueba
+
 app.get('/', (req, res) => {
   res.send('Backend MACH TI funcionando');
 });
