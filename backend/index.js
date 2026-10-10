@@ -8,9 +8,11 @@ app.use(express.json());
 
 
 const rutasClientes = require('./routes/clientes');
+const rutasServicios = require('./routes/servicios'); 
 
 
 app.use('/api/clientes', rutasClientes);
+app.use('/api/servicios', rutasServicios); 
 
 
 app.get('/', (req, res) => {
