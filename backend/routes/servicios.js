@@ -4,7 +4,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-// Crear un nuevo servicio (POST /api/servicios)
+// Crear un nuevo servicio
 router.post('/', async (req, res) => {
   const { cliente_id, nombre, pm_responsable, tarifa_cliente, horas_presupuestadas } = req.body;
   
