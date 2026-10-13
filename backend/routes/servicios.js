@@ -10,6 +10,25 @@ const esUUID = (str) => {
   return typeof str === 'string' && regexUUID.test(str);
 };
 
+
+
+router.get('/pms', async (req, res) => {
+  try {
+    // Busca en la tabla 'usuarios' a los que tienen rol 'pm'
+    const { data, error } = await supabase
+      .from('usuarios') 
+      .select('id, nombre, rol') 
+      .eq('rol', 'pm');
+
+    if (error) throw error;
+    res.status(200).json(data || []);
+  } catch (err) {
+    console.error('Error cargando PMs:', err);
+    res.status(500).json({ error: 'No se pudieron obtener los PMs' });
+  }
+});
+
+
 // Crear un nuevo servicio
 router.post('/', async (req, res) => {
   const { 
@@ -28,7 +47,7 @@ router.post('/', async (req, res) => {
   const idFinalCliente = cliente_id || id_cliente || clienteId;
   const cantidadHoras = Number(horas_contratadas || horas_presupuestadas || 0);
 
-  // Si pm_responsable no es un UUID válido (ej. "Luis Pérez"), enviamos null para no romper Supabase
+  // Si pm_responsable no es un UUID válido enviamos null para no romper Supabase
   const pmUuidFinal = esUUID(pm_responsable) ? pm_responsable : null;
 
   const { data, error } = await supabase
