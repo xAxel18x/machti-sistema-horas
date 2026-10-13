@@ -6,6 +6,7 @@ export default function GestionServicios() {
   
   // Estados para Servicios
   const [clientes, setClientes] = useState([]); 
+  const [pms, setPms] = useState([]); // Estado para la lista de PMs
   const [nuevoServicio, setNuevoServicio] = useState({
     cliente_id: '',
     nombre: '',
@@ -17,18 +18,26 @@ export default function GestionServicios() {
   });
   const [mensajeServicio, setMensajeServicio] = useState('');
 
-  // Cargar clientes al iniciar
+  // Cargar clientes y PMs al iniciar el componente
   useEffect(() => {
-    const obtenerClientes = async () => {
+    const cargarDatosIniciales = async () => {
       try {
-        const res = await fetch('http://localhost:4000/api/clientes');
-        const data = await res.json();
-        setClientes(data);
+        // Cargar Clientes
+        const resClientes = await fetch('http://localhost:4000/api/clientes');
+        const dataClientes = await resClientes.json();
+        setClientes(dataClientes);
+
+        // Cargar PMs
+        const resPms = await fetch('http://localhost:4000/api/servicios/pms');
+        if (resPms.ok) {
+          const dataPms = await resPms.json();
+          setPms(dataPms);
+        }
       } catch (err) {
-        console.error("Error cargando clientes", err);
+        console.error("Error cargando datos iniciales", err);
       }
     };
-    obtenerClientes();
+    cargarDatosIniciales();
   }, []);
 
   // Función Guardar Cliente
@@ -61,8 +70,6 @@ export default function GestionServicios() {
     const cantHoras = Number(nuevoServicio.horas_contratadas) || 0;
     const tarifa = Number(nuevoServicio.tarifa_cliente) || 0;
 
-    const esUUIDValido = (str) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
-
     const payload = {
       nombre: nuevoServicio.nombre,
       fecha_inicio: nuevoServicio.fecha_inicio || null,
@@ -72,7 +79,7 @@ export default function GestionServicios() {
       horas_presupuestadas: cantHoras,
       id_cliente: nuevoServicio.cliente_id,
       cliente_id: nuevoServicio.cliente_id,
-      ...(esUUIDValido(nuevoServicio.pm_responsable) && { pm_responsable: nuevoServicio.pm_responsable })
+      pm_responsable: nuevoServicio.pm_responsable || null
     };
 
     const res = await fetch('http://localhost:4000/api/servicios', {
@@ -129,18 +136,8 @@ export default function GestionServicios() {
 
       {/* CONTENEDOR PRINCIPAL */}
       <div style={{ background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '28px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)' }}>
-        
-        {/* HEADER */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.3px' }}>
-            ¡Bienvenido, Usuario Test!
-          </h2>
-          <span style={{ display: 'inline-block', backgroundColor: '#E2E8F0', color: '#64748B', fontSize: '12px', padding: '3px 14px', borderRadius: '16px', marginTop: '6px', fontWeight: '600' }}>
-            Tu rol es: pm
-          </span>
-        </div>
 
-        {/* PASO 1 */}
+        {/* PASO 1: CLIENTES */}
         <div style={{ position: 'relative', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '14px', padding: '20px', marginBottom: '28px', paddingTop: '24px' }}>
           <div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#2563EB', color: '#FFFFFF', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '13px', boxShadow: '0 2px 5px rgba(37,99,235,0.3)' }}>
             1
@@ -174,7 +171,7 @@ export default function GestionServicios() {
           )}
         </div>
 
-        {/* PASO 2 */}
+        {/* PASO 2: SERVICIOS */}
         <div style={{ position: 'relative', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '14px', padding: '20px', paddingTop: '24px' }}>
           <div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#16A34A', color: '#FFFFFF', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '13px', boxShadow: '0 2px 5px rgba(22,163,74,0.3)' }}>
             2
@@ -220,18 +217,27 @@ export default function GestionServicios() {
               </div>
             </div>
 
+            {/*DESPLEGABLE DE PM RESPONSABLE */}
             <div>
               <label style={labelStyle}>PM Responsable</label>
-              <input 
-                type="text" 
-                placeholder="Ej. Juan Pérez" 
+              <select 
                 value={nuevoServicio.pm_responsable} 
                 onChange={(e) => setNuevoServicio({...nuevoServicio, pm_responsable: e.target.value})}
-                style={inputStyle} 
-              />
+                style={inputStyle}
+              >
+                <option value="">-- Selecciona un PM Responsable --</option>
+                {pms.map(pm => {
+                  const pmId = pm.id || pm.uuid || pm.id_usuario;
+                  return (
+                    <option key={pmId} value={pmId}>
+                      {pm.nombre || pm.nombre_completo || pm.email}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
 
-            {/* SECCIÓN FECHAS (BLOQUE GRIS) */}
+            {/* SECCIÓN FECHAS*/}
             <div style={{ background: '#E2E8F0', padding: '14px', borderRadius: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
               <div>
                 <label style={labelStyle}>Fecha Inicio</label>
