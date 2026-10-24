@@ -3,9 +3,9 @@ import { useState, useEffect } from 'react';
 export default function GestionServicios() {
   const [nombreCliente, setNombreCliente] = useState('');
   const [mensajeCliente, setMensajeCliente] = useState('');
-  
+
   // Estados para Servicios
-  const [clientes, setClientes] = useState([]); 
+  const [clientes, setClientes] = useState([]);
   const [pms, setPms] = useState([]); // Estado para la lista de PMs
   const [nuevoServicio, setNuevoServicio] = useState({
     cliente_id: '',
@@ -51,7 +51,7 @@ export default function GestionServicios() {
     if (res.ok) {
       setMensajeCliente('¡Cliente registrado con éxito!');
       setNombreCliente('');
-      
+
       const resClientes = await fetch('http://localhost:4000/api/clientes');
       const dataClientes = await resClientes.json();
       setClientes(dataClientes);
@@ -90,14 +90,14 @@ export default function GestionServicios() {
 
     if (res.ok) {
       setMensajeServicio('¡Servicio registrado con éxito!');
-      setNuevoServicio({ 
-        cliente_id: '', 
-        nombre: '', 
-        pm_responsable: '', 
-        fecha_inicio: '', 
-        fecha_fin: '', 
-        tarifa_cliente: '', 
-        horas_contratadas: '' 
+      setNuevoServicio({
+        cliente_id: '',
+        nombre: '',
+        pm_responsable: '',
+        fecha_inicio: '',
+        fecha_fin: '',
+        tarifa_cliente: '',
+        horas_contratadas: ''
       });
     } else {
       const errorData = await res.json();
@@ -105,95 +105,96 @@ export default function GestionServicios() {
     }
   };
 
-  const inputStyle = {
-    padding: '10px 14px',
-    borderRadius: '10px',
-    border: '1px solid #94A3B8',
-    fontSize: '14px',
-    backgroundColor: '#FFFFFF',
-    color: '#0F172A',
-    outline: 'none',
-    width: '100%',
-    boxSizing: 'border-box'
-  };
+  // ---- Solo presentación (no guarda nada) ----
+  // Si la API devolviera algo que no es una lista, evitamos que la pantalla se rompa.
+  const listaClientes = Array.isArray(clientes) ? clientes : [];
+  const listaPms = Array.isArray(pms) ? pms : [];
 
-  const labelStyle = {
-    fontSize: '13px',
-    fontWeight: '700',
-    color: '#1E293B',
-    marginBottom: '4px',
-    display: 'block'
-  };
+  const montoEstimado =
+    (Number(nuevoServicio.tarifa_cliente) || 0) * (Number(nuevoServicio.horas_contratadas) || 0);
+  const montoTexto = montoEstimado > 0
+    ? montoEstimado.toLocaleString('es-PE', { style: 'currency', currency: 'PEN' })
+    : '—';
+
+  const esError = (mensaje) => mensaje.includes('Error');
 
   return (
-    <div style={{ maxWidth: '680px', width: '100%', margin: '0 auto', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      <style>{`
-        input[type="date"]::-webkit-calendar-picker-indicator {
-          cursor: pointer;
-          filter: opacity(0.6);
-        }
-      `}</style>
+    <div className="modulo">
+      <header className="modulo__cabecera">
+        <h1>Clientes y servicios</h1>
+        <p>Registra a quién le presta servicio MACH TI y bajo qué condiciones.</p>
+      </header>
 
-      {/* CONTENEDOR PRINCIPAL */}
-      <div style={{ background: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '28px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05)' }}>
-
+      <div className="modulo__rejilla">
         {/* PASO 1: CLIENTES */}
-        <div style={{ position: 'relative', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '14px', padding: '20px', marginBottom: '28px', paddingTop: '24px' }}>
-          <div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#2563EB', color: '#FFFFFF', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '13px', boxShadow: '0 2px 5px rgba(37,99,235,0.3)' }}>
-            1
+        <section className="panel panel--apoyo" aria-labelledby="titulo-cliente">
+          <div className="panel__titulo">
+            <span className="paso" aria-hidden="true">1</span>
+            <h2 id="titulo-cliente">Registrar cliente</h2>
           </div>
 
-          <h3 style={{ fontSize: '17px', fontWeight: '800', textAlign: 'center', color: '#0F172A', margin: '0 0 16px 0' }}>
-            1. Registrar Nuevo Cliente
-          </h3>
-
-          <form onSubmit={registrarCliente} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div>
-              <label style={labelStyle}>Nombre de la empresa</label>
-              <input 
-                type="text" 
-                placeholder="Nombre de la empresa (Ej. CANVIA)" 
-                value={nombreCliente} 
+          <form className="formulario" onSubmit={registrarCliente}>
+            <div className="campo">
+              <label htmlFor="cliente-nombre">Nombre de la empresa</label>
+              <input
+                id="cliente-nombre"
+                type="text"
+                placeholder="Ej. CANVIA"
+                value={nombreCliente}
                 onChange={(e) => setNombreCliente(e.target.value)}
-                style={inputStyle} 
-                required 
+                required
               />
             </div>
-            <button type="submit" style={{ padding: '11px', background: '#1D4ED8', color: '#FFFFFF', border: 'none', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', marginTop: '4px' }}>
-              Guardar Cliente
+            <button type="submit" className="boton boton--primario">
+              Registrar cliente
             </button>
           </form>
 
           {mensajeCliente && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', color: '#16A34A', marginTop: '12px', fontSize: '13px', fontWeight: '700' }}>
-              <span>✔</span> {mensajeCliente}
-            </div>
+            <p className="aviso aviso--ok" role="status">
+              <span aria-hidden="true">✔</span> {mensajeCliente}
+            </p>
           )}
-        </div>
+
+          <div className="clientes">
+            <div className="clientes__cabecera">
+              <h3>Clientes registrados</h3>
+              <span className="contador">{listaClientes.length}</span>
+            </div>
+            {listaClientes.length === 0 ? (
+              <p className="clientes__vacio">
+                Aún no hay clientes. Registra el primero para poder crear servicios.
+              </p>
+            ) : (
+              <ul className="clientes__lista">
+                {listaClientes.map((cli) => {
+                  const idValido = cli.id || cli.id_cliente || cli.cliente_id || cli.uuid;
+                  return <li key={idValido}>{cli.nombre || cli.nombre_empresa}</li>;
+                })}
+              </ul>
+            )}
+          </div>
+        </section>
 
         {/* PASO 2: SERVICIOS */}
-        <div style={{ position: 'relative', background: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '14px', padding: '20px', paddingTop: '24px' }}>
-          <div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#16A34A', color: '#FFFFFF', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '13px', boxShadow: '0 2px 5px rgba(22,163,74,0.3)' }}>
-            2
+        <section className="panel panel--principal" aria-labelledby="titulo-servicio">
+          <div className="panel__titulo">
+            <span className="paso" aria-hidden="true">2</span>
+            <h2 id="titulo-servicio">Registrar servicio</h2>
           </div>
 
-          <h3 style={{ fontSize: '17px', fontWeight: '800', textAlign: 'center', color: '#0F172A', margin: '0 0 16px 0' }}>
-            2. Registrar Nuevo Servicio a Cliente
-          </h3>
-
-          <form onSubmit={registrarServicio} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <div>
-                <label style={labelStyle}>Cliente</label>
-                <select 
-                  required 
-                  value={nuevoServicio.cliente_id} 
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, cliente_id: e.target.value})}
-                  style={inputStyle}
+          <form className="formulario" onSubmit={registrarServicio}>
+            <div className="rejilla-2">
+              <div className="campo">
+                <label htmlFor="servicio-cliente">Cliente</label>
+                <select
+                  id="servicio-cliente"
+                  required
+                  value={nuevoServicio.cliente_id}
+                  onChange={(e) => setNuevoServicio({ ...nuevoServicio, cliente_id: e.target.value })}
                 >
-                  <option value="">-- Selecciona un Cliente --</option>
-                  {clientes.map(cli => {
+                  <option value="">Selecciona un cliente</option>
+                  {listaClientes.map((cli) => {
                     const idValido = cli.id || cli.id_cliente || cli.cliente_id || cli.uuid;
                     return (
                       <option key={idValido} value={idValido}>
@@ -204,29 +205,29 @@ export default function GestionServicios() {
                 </select>
               </div>
 
-              <div>
-                <label style={labelStyle}>Nombre del Servicio</label>
-                <input 
-                  type="text" 
-                  placeholder="Ej. Soporte Nivel 2" 
+              <div className="campo">
+                <label htmlFor="servicio-nombre">Nombre del servicio</label>
+                <input
+                  id="servicio-nombre"
+                  type="text"
+                  placeholder="Ej. Soporte Nivel 2"
                   required
-                  value={nuevoServicio.nombre} 
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, nombre: e.target.value})}
-                  style={inputStyle} 
+                  value={nuevoServicio.nombre}
+                  onChange={(e) => setNuevoServicio({ ...nuevoServicio, nombre: e.target.value })}
                 />
               </div>
             </div>
 
-            {/*DESPLEGABLE DE PM RESPONSABLE */}
-            <div>
-              <label style={labelStyle}>PM Responsable</label>
-              <select 
-                value={nuevoServicio.pm_responsable} 
-                onChange={(e) => setNuevoServicio({...nuevoServicio, pm_responsable: e.target.value})}
-                style={inputStyle}
+            {/* DESPLEGABLE DE PM RESPONSABLE */}
+            <div className="campo">
+              <label htmlFor="servicio-pm">PM responsable</label>
+              <select
+                id="servicio-pm"
+                value={nuevoServicio.pm_responsable}
+                onChange={(e) => setNuevoServicio({ ...nuevoServicio, pm_responsable: e.target.value })}
               >
-                <option value="">-- Selecciona un PM Responsable --</option>
-                {pms.map(pm => {
+                <option value="">Selecciona un PM responsable</option>
+                {listaPms.map((pm) => {
                   const pmId = pm.id || pm.uuid || pm.id_usuario;
                   return (
                     <option key={pmId} value={pmId}>
@@ -237,70 +238,84 @@ export default function GestionServicios() {
               </select>
             </div>
 
-            {/* SECCIÓN FECHAS*/}
-            <div style={{ background: '#E2E8F0', padding: '14px', borderRadius: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <div>
-                <label style={labelStyle}>Fecha Inicio</label>
-                <input 
-                  type="date" 
-                  value={nuevoServicio.fecha_inicio} 
-                  onClick={(e) => e.target.showPicker && e.target.showPicker()}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, fecha_inicio: e.target.value})}
-                  style={{ ...inputStyle, cursor: 'pointer' }} 
-                />
+            {/* SECCIÓN FECHAS */}
+            <fieldset className="grupo">
+              <legend>Vigencia del servicio</legend>
+              <div className="rejilla-2">
+                <div className="campo">
+                  <label htmlFor="servicio-inicio">Fecha de inicio</label>
+                  <input
+                    id="servicio-inicio"
+                    type="date"
+                    value={nuevoServicio.fecha_inicio}
+                    onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                    onChange={(e) => setNuevoServicio({ ...nuevoServicio, fecha_inicio: e.target.value })}
+                  />
+                </div>
+
+                <div className="campo">
+                  <label htmlFor="servicio-fin">Fecha de fin</label>
+                  <input
+                    id="servicio-fin"
+                    type="date"
+                    value={nuevoServicio.fecha_fin}
+                    onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                    onChange={(e) => setNuevoServicio({ ...nuevoServicio, fecha_fin: e.target.value })}
+                  />
+                </div>
+              </div>
+            </fieldset>
+
+            {/* CONDICIONES ECONÓMICAS */}
+            <fieldset className="grupo">
+              <legend>Condiciones económicas</legend>
+              <div className="rejilla-2">
+                <div className="campo">
+                  <label htmlFor="servicio-tarifa">Tarifa por hora (S/)</label>
+                  <input
+                    id="servicio-tarifa"
+                    type="number"
+                    placeholder="0.00"
+                    required
+                    step="0.01"
+                    value={nuevoServicio.tarifa_cliente}
+                    onChange={(e) => setNuevoServicio({ ...nuevoServicio, tarifa_cliente: e.target.value })}
+                  />
+                </div>
+
+                <div className="campo">
+                  <label htmlFor="servicio-horas">Horas contratadas</label>
+                  <input
+                    id="servicio-horas"
+                    type="number"
+                    placeholder="0"
+                    required
+                    value={nuevoServicio.horas_contratadas}
+                    onChange={(e) => setNuevoServicio({ ...nuevoServicio, horas_contratadas: e.target.value })}
+                  />
+                </div>
               </div>
 
-              <div>
-                <label style={labelStyle}>Fecha Fin</label>
-                <input 
-                  type="date" 
-                  value={nuevoServicio.fecha_fin} 
-                  onClick={(e) => e.target.showPicker && e.target.showPicker()}
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, fecha_fin: e.target.value})}
-                  style={{ ...inputStyle, cursor: 'pointer' }} 
-                />
+              <div className="valor">
+                <span className="valor__etiqueta">Valor estimado del servicio (tarifa × horas)</span>
+                <span className="valor__monto">{montoTexto}</span>
               </div>
-            </div>
+            </fieldset>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <div>
-                <label style={labelStyle}>Tarifa por hora (S/)</label>
-                <input 
-                  type="number" 
-                  placeholder="0.00" 
-                  required 
-                  step="0.01"
-                  value={nuevoServicio.tarifa_cliente} 
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, tarifa_cliente: e.target.value})}
-                  style={inputStyle} 
-                />
-              </div>
-
-              <div>
-                <label style={labelStyle}>Horas contratadas</label>
-                <input 
-                  type="number" 
-                  placeholder="0" 
-                  required
-                  value={nuevoServicio.horas_contratadas} 
-                  onChange={(e) => setNuevoServicio({...nuevoServicio, horas_contratadas: e.target.value})}
-                  style={inputStyle} 
-                />
-              </div>
-            </div>
-
-            <button type="submit" style={{ padding: '12px', background: '#16A34A', color: '#FFFFFF', border: 'none', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', marginTop: '6px' }}>
-              Guardar Servicio
+            <button type="submit" className="boton boton--primario">
+              Registrar servicio
             </button>
           </form>
 
           {mensajeServicio && (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', color: mensajeServicio.includes('Error') ? '#DC2626' : '#16A34A', marginTop: '12px', fontSize: '13px', fontWeight: '700' }}>
-              <span>{mensajeServicio.includes('Error') ? '✖' : '✔'}</span> {mensajeServicio}
-            </div>
+            <p
+              className={`aviso ${esError(mensajeServicio) ? 'aviso--error' : 'aviso--ok'}`}
+              role={esError(mensajeServicio) ? 'alert' : 'status'}
+            >
+              <span aria-hidden="true">{esError(mensajeServicio) ? '✖' : '✔'}</span> {mensajeServicio}
+            </p>
           )}
-        </div>
-
+        </section>
       </div>
     </div>
   );
