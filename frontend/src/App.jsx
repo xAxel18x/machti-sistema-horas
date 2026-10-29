@@ -2,6 +2,8 @@ import { useState } from 'react';
 import Login from './Login';
 import GestionServicios from './GestionServicios';
 import MarcaMach from './Marca';
+import AsignacionConsultores from './AsignacionConsultores';
+import RegistroHoras from './RegistroHoras';
 
 // Solo para mostrar: el valor guardado en la base de datos no cambia.
 const ETIQUETAS_ROL = {
@@ -46,20 +48,23 @@ export function VistaPrincipal({ usuario, onSalir }) {
 
       <main className="contenido">
         {puedeGestionarServicios ? (
-          <GestionServicios />
+          <>
+            <GestionServicios />
+
+            {rolUsuario === 'pm' && (
+              <AsignacionConsultores key={usuario.id} />
+            )}
+          </>
+        ) : rolUsuario === 'consultor' ? (
+          <RegistroHoras key={usuario.id} />
         ) : (
           <section className="sin-acceso" role="alert">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="4.5" y="10.5" width="15" height="10" rx="2" stroke="#B3261E" strokeWidth="2" />
-              <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="#B3261E" strokeWidth="2" strokeLinecap="round" />
-            </svg>
             <div>
               <h1>Permisos insuficientes</h1>
               <p>
-                Tu rol actual (<strong>{etiquetaRol}</strong>) no cuenta con permisos suficientes
-                para gestionar clientes y servicios.
+                Tu rol actual (<strong>{etiquetaRol}</strong>) no cuenta
+                con un módulo habilitado.
               </p>
-              <p>Este módulo está reservado para los roles de gestión de MACH TI.</p>
             </div>
           </section>
         )}
