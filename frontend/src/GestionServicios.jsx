@@ -1,6 +1,26 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from './api';
 
+// Icono
+function IconoOjo() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ display: 'block' }}
+    >
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
 const CATALOGO_SERVICIOS = [
   { nombre: 'Soporte Nivel 1 (Helpdesk)', tarifa: 50.00 },
   { nombre: 'Soporte Nivel 2 (Especializado)', tarifa: 80.00 },
@@ -36,7 +56,6 @@ export default function GestionServicios() {
   const [cargandoDatos, setCargandoDatos] = useState(true);
   const [errorCarga, setErrorCarga] = useState('');
 
-  // Estado para el modal de detalle del cliente
   const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
 
   const [nuevoServicio, setNuevoServicio] = useState({
@@ -485,7 +504,7 @@ export default function GestionServicios() {
                       display: 'flex', 
                       justifyContent: 'space-between', 
                       alignItems: 'center', 
-                      padding: '0.4rem 0.2rem',
+                      padding: '0.45rem 0.25rem',
                       borderBottom: '1px solid #f0f0f0'
                     }}
                   >
@@ -494,23 +513,30 @@ export default function GestionServicios() {
                     </span>
                     <button
                       type="button"
-                      title="Ver información completa"
+                      title="Ver ficha técnica"
                       onClick={() => setClienteSeleccionado(cliente)}
                       style={{
-                        background: 'none',
-                        border: 'none',
+                        background: '#f8fafc',
+                        border: '1px solid #cbd5e1',
                         cursor: 'pointer',
-                        fontSize: '1.15rem',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        lineHeight: 1,
-                        display: 'flex',
+                        padding: '4px 6px',
+                        borderRadius: '5px',
+                        display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: '#0052cc'
+                        color: '#1e3a8a',
+                        transition: 'all 0.15s ease-in-out'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#e2e8f0';
+                        e.currentTarget.style.borderColor = '#94a3b8';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f8fafc';
+                        e.currentTarget.style.borderColor = '#cbd5e1';
                       }}
                     >
-                      👁️
+                      <IconoOjo />
                     </button>
                   </li>
                 ))}
@@ -704,7 +730,8 @@ export default function GestionServicios() {
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.55)',
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(2px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -720,13 +747,13 @@ export default function GestionServicios() {
               maxWidth: '480px',
               width: '100%',
               padding: '1.5rem',
-              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.25)',
-              position: 'relative',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              border: '1px solid #e2e8f0',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.5rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#1e293b' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.6rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: '600' }}>
                 Ficha del Cliente
               </h3>
               <button
@@ -738,43 +765,61 @@ export default function GestionServicios() {
                   fontSize: '1.25rem',
                   cursor: 'pointer',
                   color: '#64748b',
-                  padding: '4px',
+                  padding: '2px 6px',
+                  lineHeight: 1,
                 }}
               >
                 ✕
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.95rem', color: '#334155' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', fontSize: '0.92rem', color: '#334155' }}>
               <div>
-                <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.8rem', textTransform: 'uppercase' }}>Razón Social:</strong>
-                <span>{clienteSeleccionado.nombre || '—'}</span>
+                <strong style={{ color: '#64748b', display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Razón Social</strong>
+                <span style={{ fontWeight: '500', color: '#0f172a' }}>{clienteSeleccionado.nombre || '—'}</span>
               </div>
 
               <div>
-                <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.8rem', textTransform: 'uppercase' }}>Nombre Comercial / Marca:</strong>
+                <strong style={{ color: '#64748b', display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nombre Comercial / Marca</strong>
                 <span>{clienteSeleccionado.nombre_comercial || 'No especificado'}</span>
               </div>
 
               <div>
-                <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.8rem', textTransform: 'uppercase' }}>RUC:</strong>
+                <strong style={{ color: '#64748b', display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>RUC</strong>
                 <span>{clienteSeleccionado.ruc || 'No registrado'}</span>
               </div>
 
               <div>
-                <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.8rem', textTransform: 'uppercase' }}>Correo de contacto:</strong>
+                <strong style={{ color: '#64748b', display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Correo de contacto</strong>
                 <span>{clienteSeleccionado.correo || 'No registrado'}</span>
               </div>
 
               <div>
-                <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.8rem', textTransform: 'uppercase' }}>Teléfono:</strong>
+                <strong style={{ color: '#64748b', display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Teléfono</strong>
                 <span>{clienteSeleccionado.telefono || 'No registrado'}</span>
               </div>
 
               {clienteSeleccionado.creado_en && (
                 <div>
-                  <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.8rem', textTransform: 'uppercase' }}>Fecha de registro:</strong>
-                  <span>{new Date(clienteSeleccionado.creado_en).toLocaleString('es-PE')}</span>
+                  <strong style={{ color: '#64748b', display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fecha de registro</strong>
+                  <span>
+                  {(() => {             
+                    const fechaUtcStr = clienteSeleccionado.creado_en.endsWith('Z')
+                      ? clienteSeleccionado.creado_en
+                      : `${clienteSeleccionado.creado_en}Z`;
+
+                    return new Date(fechaUtcStr).toLocaleString('es-PE', {
+                      timeZone: 'America/Lima',
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                      hour12: true,
+                    });
+                  })()}
+                </span>
                 </div>
               )}
             </div>
@@ -784,7 +829,7 @@ export default function GestionServicios() {
                 type="button"
                 className="boton boton--primario"
                 onClick={() => setClienteSeleccionado(null)}
-                style={{ padding: '0.5rem 1.25rem' }}
+                style={{ padding: '0.45rem 1.25rem' }}
               >
                 Cerrar
               </button>
