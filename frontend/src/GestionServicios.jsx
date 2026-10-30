@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
 import { apiFetch } from './api';
 
+const CATALOGO_SERVICIOS = [
+  { nombre: 'Soporte Nivel 1 (Helpdesk)', tarifa: 50.00 },
+  { nombre: 'Soporte Nivel 2 (Especializado)', tarifa: 80.00 },
+  { nombre: 'Consultoría Cloud & DevOps', tarifa: 150.00 },
+  { nombre: 'Desarrollo de Software a Medida', tarifa: 120.00 },
+  { nombre: 'Auditoría y Seguridad TI', tarifa: 180.00 },
+  { nombre: 'Gestión de Infraestructura y Redes', tarifa: 95.00 },
+];
+
 const SERVICIO_INICIAL = {
   cliente_id: '',
   nombre: '',
@@ -12,7 +21,13 @@ const SERVICIO_INICIAL = {
 };
 
 export default function GestionServicios() {
+  const [rucCliente, setRucCliente] = useState('');
   const [nombreCliente, setNombreCliente] = useState('');
+  const [nombreComercial, setNombreComercial] = useState('');
+  const [correoCliente, setCorreoCliente] = useState('');
+  const [telefonoCliente, setTelefonoCliente] = useState('');
+  
+  const [buscandoRuc, setBuscandoRuc] = useState(false);
   const [mensajeCliente, setMensajeCliente] = useState('');
   const [guardandoCliente, setGuardandoCliente] = useState(false);
 
@@ -21,11 +36,16 @@ export default function GestionServicios() {
   const [cargandoDatos, setCargandoDatos] = useState(true);
   const [errorCarga, setErrorCarga] = useState('');
 
+  // Estado para el modal de detalle del cliente
+  const [clienteSeleccionado, setClienteSeleccionado] = useState(null);
+
   const [nuevoServicio, setNuevoServicio] = useState({
     ...SERVICIO_INICIAL,
   });
   const [mensajeServicio, setMensajeServicio] = useState('');
   const [guardandoServicio, setGuardandoServicio] = useState(false);
+
+  const hoyStr = new Date().toLocaleDateString('en-CA');
 
   async function leerRespuesta(res, mensajeError) {
     const data = await res.json().catch(() => null);
@@ -85,7 +105,32 @@ export default function GestionServicios() {
     };
   }, []);
 
-  // Registrar cliente
+  const buscarRuc = () => {
+    const rucLimpio = rucCliente.trim();
+
+    if (rucLimpio.length !== 11) {
+      setMensajeCliente('Error: El RUC debe tener exactamente 11 dígitos.');
+      return;
+    }
+
+    setBuscandoRuc(true);
+    setMensajeCliente('');
+
+    apiFetch('/clientes/buscar-ruc/' + rucLimpio)
+      .then((res) => leerRespuesta(res, 'No se encontró la empresa con ese RUC.'))
+      .then((datos) => {
+        setNombreCliente(datos.nombre || '');
+        setMensajeCliente('¡Razón social encontrada exitosamente!');
+      })
+      .catch((err) => {
+        setMensajeCliente('Error: ' + (err.message || 'No se pudo obtener la Razón Social.'));
+        setNombreCliente('');
+      })
+      .finally(() => {
+        setBuscandoRuc(false);
+      });
+  };
+
   const registrarCliente = async (e) => {
     e.preventDefault();
 
@@ -96,27 +141,38 @@ export default function GestionServicios() {
     const nombre = nombreCliente.trim();
 
     if (!nombre) {
-      setMensajeCliente('Error: Ingresa el nombre de la empresa.');
+      setMensajeCliente('Error: Ingresa el nombre o razón social de la empresa.');
       return;
     }
 
     setGuardandoCliente(true);
 
     try {
+      const payload = {
+        ruc: rucCliente.trim() || null,
+        nombre: nombre,
+        nombre_comercial: nombreComercial.trim() || null,
+        correo: correoCliente.trim() || null,
+        telefono: telefonoCliente.trim() || null,
+      };
+
       const res = await apiFetch('/clientes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre }),
+        body: JSON.stringify(payload),
       });
 
       await leerRespuesta(res, 'No se pudo registrar el cliente.');
 
+      setRucCliente('');
       setNombreCliente('');
+      setNombreComercial('');
+      setCorreoCliente('');
+      setTelefonoCliente('');
       setMensajeCliente('¡Cliente registrado con éxito!');
 
       try {
         const resClientes = await apiFetch('/clientes');
-
         const dataClientes = await leerRespuesta(
           resClientes,
           'No se pudo actualizar la lista de clientes.'
@@ -129,8 +185,7 @@ export default function GestionServicios() {
         setClientes(dataClientes);
       } catch (error) {
         setMensajeCliente(
-          'Error: El cliente sí se registró, pero no se pudo actualizar ' +
-            'el listado. Recarga la página antes de volver a registrarlo. ' +
+          'Error: El cliente sí se registró, pero no se pudo actualizar el listado. Recarga la página. ' +
             error.message
         );
       }
@@ -143,7 +198,18 @@ export default function GestionServicios() {
     }
   };
 
-  // Registrar servicio
+  const handleSeleccionServicio = (nombreSeleccionado) => {
+    const itemEncontrado = CATALOGO_SERVICIOS.find(
+      (s) => s.nombre === nombreSeleccionado
+    );
+
+    setNuevoServicio((prev) => ({
+      ...prev,
+      nombre: nombreSeleccionado,
+      tarifa_cliente: itemEncontrado ? itemEncontrado.tarifa.toFixed(2) : '',
+    }));
+  };
+
   const registrarServicio = async (e) => {
     e.preventDefault();
 
@@ -152,16 +218,32 @@ export default function GestionServicios() {
     setMensajeServicio('');
 
     if (!nuevoServicio.cliente_id) {
-      setMensajeServicio(
-        'Error: Por favor selecciona un cliente de la lista.'
-      );
+      setMensajeServicio('Error: Por favor selecciona un cliente de la lista.');
       return;
     }
 
-    const nombre = nuevoServicio.nombre.trim();
+    if (!nuevoServicio.nombre) {
+      setMensajeServicio('Error: Selecciona un servicio del catálogo.');
+      return;
+    }
 
-    if (!nombre) {
-      setMensajeServicio('Error: Ingresa el nombre del servicio.');
+    if (!nuevoServicio.pm_responsable) {
+      setMensajeServicio('Error: Selecciona un PM responsable.');
+      return;
+    }
+
+    if (!nuevoServicio.fecha_inicio) {
+      setMensajeServicio('Error: Ingresa la fecha de inicio del servicio.');
+      return;
+    }
+
+    if (nuevoServicio.fecha_inicio < hoyStr) {
+      setMensajeServicio('Error: La fecha de inicio no puede ser anterior a la fecha actual.');
+      return;
+    }
+
+    if (nuevoServicio.fecha_fin && nuevoServicio.fecha_fin < nuevoServicio.fecha_inicio) {
+      setMensajeServicio('Error: La fecha de fin no puede ser anterior a la fecha de inicio.');
       return;
     }
 
@@ -169,9 +251,7 @@ export default function GestionServicios() {
       nuevoServicio.tarifa_cliente === '' ||
       nuevoServicio.horas_contratadas === ''
     ) {
-      setMensajeServicio(
-        'Error: Ingresa la tarifa y las horas contratadas.'
-      );
+      setMensajeServicio('Error: Ingresa las horas contratadas.');
       return;
     }
 
@@ -181,35 +261,24 @@ export default function GestionServicios() {
     if (
       !Number.isFinite(tarifa) ||
       !Number.isFinite(cantHoras) ||
-      tarifa < 0 ||
-      cantHoras < 0
+      tarifa <= 0 ||
+      cantHoras <= 0
     ) {
       setMensajeServicio(
-        'Error: La tarifa y las horas deben ser números válidos no negativos.'
-      );
-      return;
-    }
-
-    if (
-      nuevoServicio.fecha_inicio &&
-      nuevoServicio.fecha_fin &&
-      nuevoServicio.fecha_fin < nuevoServicio.fecha_inicio
-    ) {
-      setMensajeServicio(
-        'Error: La fecha de fin no puede ser anterior a la fecha de inicio.'
+        'Error: La tarifa y las horas contratadas deben ser números mayores a cero.'
       );
       return;
     }
 
     const payload = {
-      nombre,
-      fecha_inicio: nuevoServicio.fecha_inicio || null,
+      nombre: nuevoServicio.nombre,
+      fecha_inicio: nuevoServicio.fecha_inicio,
       fecha_fin: nuevoServicio.fecha_fin || null,
       tarifa_cliente: tarifa,
       horas_contratadas: cantHoras,
       horas_presupuestadas: cantHoras,
       cliente_id: nuevoServicio.cliente_id,
-      pm_responsable: nuevoServicio.pm_responsable || null,
+      pm_responsable: nuevoServicio.pm_responsable,
     };
 
     setGuardandoServicio(true);
@@ -235,10 +304,13 @@ export default function GestionServicios() {
   };
 
   const actualizarServicio = (campo, valor) => {
-    setNuevoServicio((anterior) => ({
-      ...anterior,
-      [campo]: valor,
-    }));
+    setNuevoServicio((anterior) => {
+      const actualizado = { ...anterior, [campo]: valor };
+      if (campo === 'fecha_inicio' && actualizado.fecha_fin && actualizado.fecha_fin < valor) {
+        actualizado.fecha_fin = '';
+      }
+      return actualizado;
+    });
   };
 
   const montoEstimado =
@@ -275,7 +347,7 @@ export default function GestionServicios() {
       )}
 
       <div className="modulo__rejilla">
-        {/* PASO 1: CLIENTES */}
+        {/* === PASO 1: CLIENTES === */}
         <section
           className="panel panel--apoyo"
           aria-labelledby="titulo-cliente"
@@ -288,12 +360,37 @@ export default function GestionServicios() {
           </div>
 
           <form className="formulario" onSubmit={registrarCliente}>
+            <div className="campo" style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+              <div style={{ flex: 1 }}>
+                <label htmlFor="cliente-ruc">RUC de la empresa</label>
+                <input
+                  id="cliente-ruc"
+                  type="text"
+                  maxLength="11"
+                  placeholder="11 dígitos"
+                  value={rucCliente}
+                  onChange={(e) => setRucCliente(e.target.value.replace(/\D/g, ''))}
+                  disabled={guardandoCliente || buscandoRuc}
+                  required
+                />
+              </div>
+              <button
+                type="button"
+                className="boton boton--secundario"
+                onClick={buscarRuc}
+                disabled={buscandoRuc || rucCliente.trim().length !== 11}
+                style={{ padding: '0.6rem 1rem', height: 'fit-content' }}
+              >
+                {buscandoRuc ? 'Buscando...' : 'Buscar RUC'}
+              </button>
+            </div>
+
             <div className="campo">
-              <label htmlFor="cliente-nombre">Nombre de la empresa</label>
+              <label htmlFor="cliente-nombre">Razón Social</label>
               <input
                 id="cliente-nombre"
                 type="text"
-                placeholder="Ej. CANVIA"
+                placeholder="Ej. CENCOSUD RETAIL PERU S.A."
                 value={nombreCliente}
                 onChange={(e) => setNombreCliente(e.target.value)}
                 disabled={guardandoCliente}
@@ -301,10 +398,51 @@ export default function GestionServicios() {
               />
             </div>
 
+            <div className="campo">
+              <label htmlFor="cliente-comercial">Nombre Comercial / Marca (Opcional)</label>
+              <input
+                id="cliente-comercial"
+                type="text"
+                placeholder="Ej. Metro, Wong, Falabella..."
+                value={nombreComercial}
+                onChange={(e) => setNombreComercial(e.target.value)}
+                disabled={guardandoCliente}
+              />
+            </div>
+
+            <div className="rejilla-2" style={{ display: 'flex', gap: '1rem' }}>
+              <div className="campo" style={{ flex: 1 }}>
+                <label htmlFor="cliente-correo">Correo de contacto</label>
+                <input
+                  id="cliente-correo"
+                  type="email"
+                  placeholder="contacto@empresa.com"
+                  value={correoCliente}
+                  onChange={(e) => setCorreoCliente(e.target.value)}
+                  disabled={guardandoCliente}
+                  required
+                />
+              </div>
+
+              <div className="campo" style={{ flex: 1 }}>
+                <label htmlFor="cliente-telefono">Teléfono</label>
+                <input
+                  id="cliente-telefono"
+                  type="text"
+                  placeholder="Ej. 999888777"
+                  value={telefonoCliente}
+                  onChange={(e) => setTelefonoCliente(e.target.value)}
+                  disabled={guardandoCliente}
+                  required
+                />
+              </div>
+            </div>
+
             <button
               type="submit"
               className="boton boton--primario"
               disabled={guardandoCliente}
+              style={{ marginTop: '1rem' }}
             >
               {guardandoCliente ? 'Registrando…' : 'Registrar cliente'}
             </button>
@@ -341,14 +479,47 @@ export default function GestionServicios() {
             ) : (
               <ul className="clientes__lista">
                 {clientes.map((cliente) => (
-                  <li key={cliente.id}>{cliente.nombre}</li>
+                  <li 
+                    key={cliente.id} 
+                    style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      padding: '0.4rem 0.2rem',
+                      borderBottom: '1px solid #f0f0f0'
+                    }}
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '8px' }}>
+                      {cliente.nombre}
+                    </span>
+                    <button
+                      type="button"
+                      title="Ver información completa"
+                      onClick={() => setClienteSeleccionado(cliente)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '1.15rem',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        lineHeight: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#0052cc'
+                      }}
+                    >
+                      👁️
+                    </button>
+                  </li>
                 ))}
               </ul>
             )}
           </div>
         </section>
 
-        {/* PASO 2: SERVICIOS */}
+        {/* === PASO 2: SERVICIOS === */}
         <section
           className="panel panel--principal"
           aria-labelledby="titulo-servicio"
@@ -384,17 +555,20 @@ export default function GestionServicios() {
 
               <div className="campo">
                 <label htmlFor="servicio-nombre">Nombre del servicio</label>
-                <input
+                <select
                   id="servicio-nombre"
-                  type="text"
-                  placeholder="Ej. Soporte Nivel 2"
                   required
                   value={nuevoServicio.nombre}
                   disabled={guardandoServicio}
-                  onChange={(e) =>
-                    actualizarServicio('nombre', e.target.value)
-                  }
-                />
+                  onChange={(e) => handleSeleccionServicio(e.target.value)}
+                >
+                  <option value="">Selecciona un tipo de servicio</option>
+                  {CATALOGO_SERVICIOS.map((item) => (
+                    <option key={item.nombre} value={item.nombre}>
+                      {item.nombre}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -402,6 +576,7 @@ export default function GestionServicios() {
               <label htmlFor="servicio-pm">PM responsable</label>
               <select
                 id="servicio-pm"
+                required
                 value={nuevoServicio.pm_responsable}
                 disabled={cargandoDatos || guardandoServicio}
                 onChange={(e) =>
@@ -426,6 +601,8 @@ export default function GestionServicios() {
                   <input
                     id="servicio-inicio"
                     type="date"
+                    required
+                    min={hoyStr}
                     value={nuevoServicio.fecha_inicio}
                     onChange={(e) =>
                       actualizarServicio('fecha_inicio', e.target.value)
@@ -438,7 +615,7 @@ export default function GestionServicios() {
                   <input
                     id="servicio-fin"
                     type="date"
-                    min={nuevoServicio.fecha_inicio || undefined}
+                    min={nuevoServicio.fecha_inicio || hoyStr}
                     value={nuevoServicio.fecha_fin}
                     onChange={(e) =>
                       actualizarServicio('fecha_fin', e.target.value)
@@ -461,12 +638,9 @@ export default function GestionServicios() {
                     type="number"
                     placeholder="0.00"
                     required
-                    min="0"
-                    step="0.01"
+                    readOnly
+                    style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
                     value={nuevoServicio.tarifa_cliente}
-                    onChange={(e) =>
-                      actualizarServicio('tarifa_cliente', e.target.value)
-                    }
                   />
                 </div>
 
@@ -479,7 +653,7 @@ export default function GestionServicios() {
                     type="number"
                     placeholder="0"
                     required
-                    min="0"
+                    min="1"
                     step="1"
                     value={nuevoServicio.horas_contratadas}
                     onChange={(e) =>
@@ -521,6 +695,103 @@ export default function GestionServicios() {
           )}
         </section>
       </div>
+
+      {/* === MODAL DE DETALLE DEL CLIENTE === */}
+      {clienteSeleccionado && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1rem',
+          }}
+          onClick={() => setClienteSeleccionado(null)}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '8px',
+              maxWidth: '480px',
+              width: '100%',
+              padding: '1.5rem',
+              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.25)',
+              position: 'relative',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #e5e7eb', paddingBottom: '0.5rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#1e293b' }}>
+                Ficha del Cliente
+              </h3>
+              <button
+                type="button"
+                onClick={() => setClienteSeleccionado(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.25rem',
+                  cursor: 'pointer',
+                  color: '#64748b',
+                  padding: '4px',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.95rem', color: '#334155' }}>
+              <div>
+                <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.8rem', textTransform: 'uppercase' }}>Razón Social:</strong>
+                <span>{clienteSeleccionado.nombre || '—'}</span>
+              </div>
+
+              <div>
+                <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.8rem', textTransform: 'uppercase' }}>Nombre Comercial / Marca:</strong>
+                <span>{clienteSeleccionado.nombre_comercial || 'No especificado'}</span>
+              </div>
+
+              <div>
+                <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.8rem', textTransform: 'uppercase' }}>RUC:</strong>
+                <span>{clienteSeleccionado.ruc || 'No registrado'}</span>
+              </div>
+
+              <div>
+                <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.8rem', textTransform: 'uppercase' }}>Correo de contacto:</strong>
+                <span>{clienteSeleccionado.correo || 'No registrado'}</span>
+              </div>
+
+              <div>
+                <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.8rem', textTransform: 'uppercase' }}>Teléfono:</strong>
+                <span>{clienteSeleccionado.telefono || 'No registrado'}</span>
+              </div>
+
+              {clienteSeleccionado.creado_en && (
+                <div>
+                  <strong style={{ color: '#0f172a', display: 'block', fontSize: '0.8rem', textTransform: 'uppercase' }}>Fecha de registro:</strong>
+                  <span>{new Date(clienteSeleccionado.creado_en).toLocaleString('es-PE')}</span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: '1.5rem', textAlign: 'right' }}>
+              <button
+                type="button"
+                className="boton boton--primario"
+                onClick={() => setClienteSeleccionado(null)}
+                style={{ padding: '0.5rem 1.25rem' }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
