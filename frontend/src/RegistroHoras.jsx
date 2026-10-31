@@ -111,11 +111,18 @@ export default function RegistroHoras() {
     (servicio) => servicio.id === servicioId
   );
 
+  const actividadesDisponibles = Array.isArray(
+  servicioSeleccionado?.actividades
+)
+  ? servicioSeleccionado.actividades
+  : [];
+
   function actualizarServicios() {
     if (guardando) return;
 
     setClienteId('');
     setServicioId('');
+    setActividad('');
     setServicios([]);
     setErrorCarga('');
     setAviso(null);
@@ -140,10 +147,10 @@ export default function RegistroHoras() {
 
     const actividadLimpia = actividad.trim();
 
-    if (!actividadLimpia) {
+    if (!actividadesDisponibles.includes(actividadLimpia)) {
       setAviso({
         tipo: 'error',
-        texto: 'Describe la actividad realizada.',
+        texto: 'Selecciona una actividad válida para el servicio.',
       });
       return;
     }
@@ -347,6 +354,7 @@ export default function RegistroHoras() {
                     onChange={(e) => {
                       setClienteId(e.target.value);
                       setServicioId('');
+                      setActividad('');
                       setAviso(null);
                     }}
                   >
@@ -370,6 +378,7 @@ export default function RegistroHoras() {
                     disabled={guardando || !clienteId}
                     onChange={(e) => {
                       setServicioId(e.target.value);
+                      setActividad('');
                       setAviso(null);
                     }}
                   >
@@ -389,31 +398,44 @@ export default function RegistroHoras() {
               </div>
 
               <div className="campo">
-                <label htmlFor="horas-actividad">Actividad realizada</label>
+                  <label htmlFor="horas-actividad">Actividad realizada</label>
 
-                <textarea
-                  id="horas-actividad"
-                  rows={4}
-                  placeholder="Ej. Atención de incidencias y soporte a usuarios"
-                  value={actividad}
-                  required
-                  disabled={guardando}
-                  onChange={(e) => {
-                    setActividad(e.target.value);
-                    setAviso(null);
-                  }}
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    padding: '12px',
-                    border: '1px solid #AABBD0',
-                    borderRadius: '6px',
-                    font: 'inherit',
-                    color: 'inherit',
-                    resize: 'vertical',
-                  }}
-                />
-              </div>
+                  <select
+                    id="horas-actividad"
+                    value={actividad}
+                    required
+                    disabled={
+                      guardando ||
+                      !servicioSeleccionado ||
+                      actividadesDisponibles.length === 0
+                    }
+                    onChange={(e) => {
+                      setActividad(e.target.value);
+                      setAviso(null);
+                    }}
+                  >
+                    <option value="">
+                      {!servicioSeleccionado
+                        ? 'Primero selecciona un servicio'
+                        : actividadesDisponibles.length === 0
+                          ? 'No hay actividades habilitadas'
+                          : 'Selecciona la actividad realizada'}
+                    </option>
+
+                    {actividadesDisponibles.map((opcion) => (
+                      <option key={opcion} value={opcion}>
+                        {opcion}
+                      </option>
+                    ))}
+                  </select>
+
+                  {servicioSeleccionado && actividadesDisponibles.length === 0 && (
+                    <p className="aviso aviso--error" role="alert">
+                      Este servicio todavía no tiene actividades habilitadas.
+                      Comunícate con tu PM para revisar su clasificación.
+                    </p>
+                  )}
+                </div>
 
               <div className="rejilla-2">
                 <div className="campo">
@@ -494,7 +516,12 @@ export default function RegistroHoras() {
               <button
                 type="submit"
                 className="boton boton--primario"
-                disabled={guardando || !servicioSeleccionado}
+                disabled={
+                  guardando ||
+                  !servicioSeleccionado ||
+                  !actividad ||
+                  actividadesDisponibles.length === 0
+                }
               >
                 {guardando ? 'Guardando…' : 'Registrar horas'}
               </button>

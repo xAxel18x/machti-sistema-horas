@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 
 const supabase = require('../config/supabase');
+const {
+  obtenerActividades,
+} = require('../config/catalogoActividades');
 
 const esUUID = (valor) => {
   const patron =
@@ -57,6 +60,10 @@ router.get('/servicios', async (req, res) => {
     const servicios = (data || [])
       .map((asignacion) => asignacion.servicio)
       .filter(Boolean)
+      .map((servicio) => ({
+        ...servicio,
+        actividades: obtenerActividades(servicio.nombre),
+      }))
       .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 
     return res.status(200).json(servicios);
@@ -130,6 +137,55 @@ router.post('/', async (req, res) => {
   }
 
   try {
+    const {
+      data: asignacion,
+      error: errorAsignacion,
+    } = await supabase
+      .from('consultores_asignados')
+      .select(`
+        servicio:servicios!consultores_asignados_servicio_id_fkey!inner (
+          id,
+          nombre
+        )
+      `)
+      .eq('consultor_id', req.usuario.id)
+      .eq('servicio_id', servicio_id)
+      .maybeSingle();
+
+    if (errorAsignacion) {
+      console.error(
+        'Error verificando actividades del servicio:',
+        errorAsignacion.message
+      );
+
+      return res.status(500).json({
+        error: 'No se pudieron verificar las actividades del servicio.',
+      });
+    }
+
+    if (!asignacion?.servicio) {
+      return res.status(403).json({
+        error: 'No tienes permiso para registrar horas en este servicio.',
+      });
+    }
+
+    const actividadesPermitidas = obtenerActividades(
+      asignacion.servicio.nombre
+    );
+
+    if (actividadesPermitidas.length === 0) {
+      return res.status(400).json({
+        error:
+          'Este servicio todavía no tiene actividades habilitadas. Comunícate con tu PM.',
+      });
+    }
+
+    if (!actividadesPermitidas.includes(actividad.trim())) {
+      return res.status(400).json({
+        error: 'Selecciona una actividad válida para este servicio.',
+      });
+    }
+
     const { data, error } = await supabase.rpc(
       'registrar_horas_consultor',
       {
