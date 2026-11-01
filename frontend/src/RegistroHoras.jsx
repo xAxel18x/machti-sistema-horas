@@ -37,7 +37,7 @@ async function leerRespuesta(res, mensajeError) {
   return data;
 }
 
-export default function RegistroHoras() {
+export default function RegistroHoras({ onVerRegistros }) {
   const [servicios, setServicios] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState('');
@@ -240,15 +240,26 @@ export default function RegistroHoras() {
           Registra el trabajo realizado en los servicios que tienes asignados.
         </p>
 
-        <button
-          type="button"
-          className="boton boton--primario"
-          onClick={actualizarServicios}
-          disabled={cargando || guardando}
-          style={{ marginTop: '12px' }}
-        >
-          {cargando ? 'Cargando…' : 'Actualizar servicios'}
-        </button>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+          <button
+            type="button"
+            className="boton boton--primario"
+            onClick={actualizarServicios}
+            disabled={cargando || guardando}
+          >
+            {cargando ? 'Cargando…' : 'Actualizar servicios'}
+          </button>
+
+          {onVerRegistros && (
+            <button
+              type="button"
+              className="boton boton--contorno"
+              onClick={onVerRegistros}
+            >
+              Consultar y corregir horas
+            </button>
+          )}
+        </div>
       </header>
 
       {cargando ? (
@@ -328,6 +339,17 @@ export default function RegistroHoras() {
                 <p>
                   <strong>Estado:</strong> Pendiente
                 </p>
+
+                {onVerRegistros && (
+                  <button
+                    type="button"
+                    className="boton boton--contorno boton--ancho"
+                    style={{ marginTop: '14px' }}
+                    onClick={onVerRegistros}
+                  >
+                    Ver en «Consultar y corregir»
+                  </button>
+                )}
               </div>
             )}
           </section>

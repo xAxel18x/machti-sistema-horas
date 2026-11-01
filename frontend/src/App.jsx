@@ -4,6 +4,7 @@ import GestionServicios from './GestionServicios';
 import MarcaMach from './Marca';
 import AsignacionConsultores from './AsignacionConsultores';
 import RegistroHoras from './RegistroHoras';
+import ConsultarHoras from './ConsultarHoras';
 
 // Solo para mostrar: el valor guardado en la base de datos no cambia.
 const ETIQUETAS_ROL = {
@@ -19,6 +20,47 @@ function iniciales(nombre = '') {
     .slice(0, 2)
     .map((p) => p[0].toUpperCase())
     .join('');
+}
+
+function ModuloConsultor({ usuario }) {
+  const [pestana, setPestana] = useState('registro'); // 'registro' | 'consulta'
+
+  return (
+    <div>
+      <nav className="pestanas" aria-label="Navegación del consultor">
+        <button
+          type="button"
+          className={`pestana ${
+            pestana === 'registro' ? 'pestana--activa' : ''
+          }`}
+          onClick={() => setPestana('registro')}
+        >
+          Registrar horas
+        </button>
+        <button
+          type="button"
+          className={`pestana ${
+            pestana === 'consulta' ? 'pestana--activa' : ''
+          }`}
+          onClick={() => setPestana('consulta')}
+        >
+          Consultar y corregir horas
+        </button>
+      </nav>
+
+      {pestana === 'registro' ? (
+        <RegistroHoras
+          key={usuario.id}
+          onVerRegistros={() => setPestana('consulta')}
+        />
+      ) : (
+        <ConsultarHoras
+          key={usuario.id}
+          onIrARegistro={() => setPestana('registro')}
+        />
+      )}
+    </div>
+  );
 }
 
 export function VistaPrincipal({ usuario, onSalir }) {
@@ -56,7 +98,7 @@ export function VistaPrincipal({ usuario, onSalir }) {
             )}
           </>
         ) : rolUsuario === 'consultor' ? (
-          <RegistroHoras key={usuario.id} />
+          <ModuloConsultor key={usuario.id} usuario={usuario} />
         ) : (
           <section className="sin-acceso" role="alert">
             <div>
