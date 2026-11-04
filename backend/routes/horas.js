@@ -30,7 +30,6 @@ function esFechaValida(valor) {
   );
 }
 
-
 // Consultar servicios asignados al consultor autenticado
 router.get('/servicios', async (req, res) => {
   try {
@@ -76,7 +75,6 @@ router.get('/servicios', async (req, res) => {
     });
   }
 });
-
 
 // HU002 - Escenario 1: Consultar horas con filtros por día, semana, cliente o servicio
 router.get('/', async (req, res) => {
@@ -189,7 +187,6 @@ router.get('/', async (req, res) => {
     });
   }
 });
-
 
 // HU001 - Registrar horas
 router.post('/', async (req, res) => {
@@ -365,8 +362,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-
-// HU002 - Escenario 2: Corregir un registro pendiente
+// HU002 - Escenario 2 & Escenario 3: Modificar registro de horas
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const { horas, actividad, es_facturable } = req.body || {};
@@ -416,9 +412,14 @@ router.put('/:id', async (req, res) => {
       });
     }
 
-    // 2. Solo se pueden editar registros en estado "pendiente"
+    // 2. HU002 - Escenario 3: Bloquear modificación si ya fue aprobado
     const estadoActual = (registro.estado || '').toLowerCase().trim();
     if (estadoActual !== 'pendiente') {
+      if (estadoActual === 'aprobado') {
+        return res.status(400).json({
+          error: 'No se puede modificar: Este registro de horas ya fue aprobado por el Project Manager.',
+        });
+      }
       return res.status(400).json({
         error: `Solo se pueden corregir registros en estado Pendiente. El estado actual es «${registro.estado}».`,
       });
@@ -569,7 +570,6 @@ router.put('/:id', async (req, res) => {
     });
   }
 });
-
 
 // HU002 - Eliminar registro pendiente
 router.delete('/:id', async (req, res) => {
