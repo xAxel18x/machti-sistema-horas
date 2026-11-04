@@ -262,8 +262,17 @@ export default function ConsultarHoras({ onIrARegistro }) {
     setAviso(null);
   }
 
-  // Abrir modal de corrección (Escenario 2)
+  // Abrir modal de corrección (Escenario 2 & Escenario 3)
   function abrirModalCorreccion(registro) {
+    const estado = (registro.estado || '').toLowerCase().trim();
+    if (estado === 'aprobado') {
+      setAviso({
+        tipo: 'error',
+        texto: 'Bloqueado: Este registro de horas ya fue aprobado y no puede ser modificado.',
+      });
+      return;
+    }
+
     setRegistroEnEdicion(registro);
     setHorasEdicion(String(registro.horas));
     setActividadEdicion(registro.actividad);
@@ -391,7 +400,6 @@ export default function ConsultarHoras({ onIrARegistro }) {
     if (Array.isArray(registroEnEdicion.servicio.actividades)) {
       return registroEnEdicion.servicio.actividades;
     }
-    // Buscar en la lista de servicios cargada
     const serv = servicios.find(
       (s) => s.id === registroEnEdicion.servicio_id
     );
@@ -691,7 +699,7 @@ export default function ConsultarHoras({ onIrARegistro }) {
         </div>
       </div>
 
-      {/* Tabla de Registros (Escenario 1 & 2) */}
+      {/* Tabla de Registros (Escenario 1, 2 & 3) */}
       <section className="panel">
         <div className="panel__titulo">
           <h2>Registros encontrados ({registros.length})</h2>
@@ -737,6 +745,7 @@ export default function ConsultarHoras({ onIrARegistro }) {
                 {registros.map((registro) => {
                   const estadoMin = (registro.estado || '').toLowerCase().trim();
                   const esPendiente = estadoMin === 'pendiente';
+                  const esAprobado = estadoMin === 'aprobado';
 
                   return (
                     <tr key={registro.id}>
@@ -808,6 +817,22 @@ export default function ConsultarHoras({ onIrARegistro }) {
                               Eliminar
                             </button>
                           </div>
+                        ) : esAprobado ? (
+                          <button
+                            type="button"
+                            className="boton boton--sm boton--contorno"
+                            style={{ opacity: 0.7, cursor: 'not-allowed' }}
+                            onClick={() =>
+                              setAviso({
+                                tipo: 'error',
+                                texto:
+                                  'Bloqueado: Este registro de horas ya fue aprobado y no puede ser modificado.',
+                              })
+                            }
+                            title="Registro aprobado - No editable"
+                          >
+                            Corregir
+                          </button>
                         ) : (
                           <span
                             style={{
@@ -855,7 +880,6 @@ export default function ConsultarHoras({ onIrARegistro }) {
             </header>
 
             <form className="modal-cuerpo" onSubmit={guardarCorreccion}>
-              {/* Resumen del registro que se está editando */}
               <div
                 style={{
                   background: 'var(--fondo)',
@@ -887,7 +911,6 @@ export default function ConsultarHoras({ onIrARegistro }) {
                 </p>
               </div>
 
-              {/* Campo Actividad */}
               <div className="campo" style={{ marginBottom: '16px' }}>
                 <label htmlFor="edicion-actividad">Actividad realizada</label>
                 {actividadesParaEdicion.length > 0 ? (
@@ -918,7 +941,6 @@ export default function ConsultarHoras({ onIrARegistro }) {
                 )}
               </div>
 
-              {/* Campo Horas */}
               <div className="campo" style={{ marginBottom: '16px' }}>
                 <label htmlFor="edicion-horas">Cantidad de horas</label>
                 <input
@@ -937,7 +959,6 @@ export default function ConsultarHoras({ onIrARegistro }) {
                 </span>
               </div>
 
-              {/* Facturabilidad */}
               <div className="campo" style={{ marginBottom: '16px' }}>
                 <label
                   htmlFor="edicion-nofacturable"
