@@ -7,6 +7,7 @@ const { autenticar, permitirRoles } = require('./middleware/auth');
 const rutasClientes = require('./routes/clientes');
 const rutasServicios = require('./routes/servicios');
 const rutasHoras = require('./routes/horas');
+const rutasAprobaciones = require('./routes/aprobaciones');
 
 const app = express();
 
@@ -40,6 +41,13 @@ app.use(
   autenticar,
   permitirRoles('consultor'),
   rutasHoras
+);
+
+app.use(
+  '/api/aprobaciones',
+  autenticar,
+  permitirRoles('pm'),
+  rutasAprobaciones
 );
 
 const PORT = process.env.PORT || 4000;

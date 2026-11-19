@@ -100,6 +100,7 @@ router.get('/', async (req, res) => {
         horas,
         es_facturable,
         estado,
+        motivo_observacion,
         creado_en,
         actualizado_en,
         servicio:servicios!inner (
@@ -516,6 +517,8 @@ router.put('/:id', async (req, res) => {
         actualizado_en: ahoraIso,
       })
       .eq('id', registro.id)
+      .eq('consultor_id', req.usuario.id)
+      .eq('estado', 'pendiente')
       .select(`
         id,
         consultor_id,
@@ -537,7 +540,7 @@ router.put('/:id', async (req, res) => {
           )
         )
       `)
-      .single();
+      .maybeSingle();
 
     if (errorUpdate) {
       console.error(
@@ -547,6 +550,13 @@ router.put('/:id', async (req, res) => {
 
       return res.status(500).json({
         error: 'No se pudo actualizar el registro de horas.',
+      });
+    }
+
+    if (!actualizado) {
+      return res.status(409).json({
+        error:
+          'El registro ya no está pendiente. Actualiza el listado antes de corregirlo.',
       });
     }
 
@@ -612,16 +622,27 @@ router.delete('/:id', async (req, res) => {
       });
     }
 
-    const { error: errorDelete } = await supabase
+      const { data: eliminado, error: errorDelete } = await supabase
       .from('registros_horas')
       .delete()
-      .eq('id', registro.id);
+      .eq('id', registro.id)
+      .eq('consultor_id', req.usuario.id)
+      .eq('estado', 'pendiente')
+      .select('id')
+      .maybeSingle();
 
     if (errorDelete) {
       console.error('Error eliminando registro de horas:', errorDelete.message);
 
       return res.status(500).json({
         error: 'No se pudo eliminar el registro de horas.',
+      });
+    }
+
+    if (!eliminado) {
+      return res.status(409).json({
+        error:
+          'El registro ya no está pendiente. Actualiza el listado antes de eliminarlo.',
       });
     }
 

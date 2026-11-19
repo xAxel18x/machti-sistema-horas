@@ -5,6 +5,7 @@ import MarcaMach from './Marca';
 import AsignacionConsultores from './AsignacionConsultores';
 import RegistroHoras from './RegistroHoras';
 import ConsultarHoras from './ConsultarHoras';
+import AprobacionHoras from './AprobacionHoras';
 
 // Solo para mostrar: el valor guardado en la base de datos no cambia.
 const ETIQUETAS_ROL = {
@@ -63,9 +64,49 @@ function ModuloConsultor({ usuario }) {
   );
 }
 
+function ModuloPm({ usuario }) {
+  const [pestana, setPestana] = useState('gestion');
+
+  return (
+    <div>
+      <nav className="pestanas" aria-label="Navegación del Project Manager">
+        <button
+          type="button"
+          className={`pestana ${
+            pestana === 'gestion' ? 'pestana--activa' : ''
+          }`}
+          aria-current={pestana === 'gestion' ? 'page' : undefined}
+          onClick={() => setPestana('gestion')}
+        >
+          Clientes y servicios
+        </button>
+
+        <button
+          type="button"
+          className={`pestana ${
+            pestana === 'aprobaciones' ? 'pestana--activa' : ''
+          }`}
+          aria-current={pestana === 'aprobaciones' ? 'page' : undefined}
+          onClick={() => setPestana('aprobaciones')}
+        >
+          Revisar y aprobar horas
+        </button>
+      </nav>
+
+      {pestana === 'gestion' ? (
+        <>
+          <GestionServicios />
+          <AsignacionConsultores key={usuario.id} />
+        </>
+      ) : (
+        <AprobacionHoras key={usuario.id} />
+      )}
+    </div>
+  );
+}
+
 export function VistaPrincipal({ usuario, onSalir }) {
   const rolUsuario = usuario.rol ? usuario.rol.toLowerCase().trim() : '';
-  const puedeGestionarServicios = rolUsuario === 'pm' || rolUsuario === 'finanzas';
   const etiquetaRol = ETIQUETAS_ROL[rolUsuario] || usuario.rol;
 
   return (
@@ -89,14 +130,10 @@ export function VistaPrincipal({ usuario, onSalir }) {
       </header>
 
       <main className="contenido">
-        {puedeGestionarServicios ? (
-          <>
-            <GestionServicios />
-
-            {rolUsuario === 'pm' && (
-              <AsignacionConsultores key={usuario.id} />
-            )}
-          </>
+          {rolUsuario === 'pm' ? (
+          <ModuloPm key={usuario.id} usuario={usuario} />
+        ) : rolUsuario === 'finanzas' ? (
+          <GestionServicios />
         ) : rolUsuario === 'consultor' ? (
           <ModuloConsultor key={usuario.id} usuario={usuario} />
         ) : (

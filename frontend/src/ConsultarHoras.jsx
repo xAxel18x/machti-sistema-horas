@@ -738,6 +738,7 @@ export default function ConsultarHoras({ onIrARegistro }) {
                   <th style={{ textAlign: 'right' }}>Horas</th>
                   <th>Tipo</th>
                   <th>Estado</th>
+                  <th>Motivo de observación</th>
                   <th style={{ textAlign: 'center' }}>Acciones</th>
                 </tr>
               </thead>
@@ -787,9 +788,19 @@ export default function ConsultarHoras({ onIrARegistro }) {
                         <span
                           className={`badge-estado badge-estado--${estadoMin}`}
                         >
-                          {registro.estado}
+                        {registro.estado}
                         </span>
                       </td>
+
+                      <td style={{
+                        minWidth: '180px',
+                        maxWidth: '280px',
+                        whiteSpace: 'normal',
+                        overflowWrap: 'anywhere',
+                      }}>
+                        {registro.motivo_observacion || '—'}
+                      </td>
+
                       <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                         {esPendiente ? (
                           <div
