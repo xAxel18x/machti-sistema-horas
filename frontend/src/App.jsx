@@ -6,6 +6,7 @@ import AsignacionConsultores from './AsignacionConsultores';
 import RegistroHoras from './RegistroHoras';
 import ConsultarHoras from './ConsultarHoras';
 import AprobacionHoras from './AprobacionHoras';
+import GestionCostos from './GestionCostos';
 
 // Solo para mostrar: el valor guardado en la base de datos no cambia.
 const ETIQUETAS_ROL = {
@@ -105,6 +106,44 @@ function ModuloPm({ usuario }) {
   );
 }
 
+function ModuloFinanzas({ usuario }) {
+  const [pestana, setPestana] = useState('costos');
+
+  return (
+    <div>
+      <nav className="pestanas" aria-label="Navegación de Finanzas">
+        <button
+          type="button"
+          className={`pestana ${
+            pestana === 'costos' ? 'pestana--activa' : ''
+          }`}
+          aria-current={pestana === 'costos' ? 'page' : undefined}
+          onClick={() => setPestana('costos')}
+        >
+          Costos de personal
+        </button>
+
+        <button
+          type="button"
+          className={`pestana ${
+            pestana === 'servicios' ? 'pestana--activa' : ''
+          }`}
+          aria-current={pestana === 'servicios' ? 'page' : undefined}
+          onClick={() => setPestana('servicios')}
+        >
+          Clientes y servicios
+        </button>
+      </nav>
+
+      {pestana === 'costos' ? (
+        <GestionCostos key={usuario.id} />
+      ) : (
+        <GestionServicios />
+      )}
+    </div>
+  );
+}
+
 export function VistaPrincipal({ usuario, onSalir }) {
   const rolUsuario = usuario.rol ? usuario.rol.toLowerCase().trim() : '';
   const etiquetaRol = ETIQUETAS_ROL[rolUsuario] || usuario.rol;
@@ -133,7 +172,7 @@ export function VistaPrincipal({ usuario, onSalir }) {
           {rolUsuario === 'pm' ? (
           <ModuloPm key={usuario.id} usuario={usuario} />
         ) : rolUsuario === 'finanzas' ? (
-          <GestionServicios />
+          <ModuloFinanzas key={usuario.id} usuario={usuario} />
         ) : rolUsuario === 'consultor' ? (
           <ModuloConsultor key={usuario.id} usuario={usuario} />
         ) : (

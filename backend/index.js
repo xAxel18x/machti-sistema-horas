@@ -8,6 +8,7 @@ const rutasClientes = require('./routes/clientes');
 const rutasServicios = require('./routes/servicios');
 const rutasHoras = require('./routes/horas');
 const rutasAprobaciones = require('./routes/aprobaciones');
+const rutasCostos = require('./routes/costos');
 
 const app = express();
 
@@ -48,6 +49,13 @@ app.use(
   autenticar,
   permitirRoles('pm'),
   rutasAprobaciones
+);
+
+app.use(
+  '/api/costos',
+  autenticar,
+  permitirRoles('finanzas'),
+  rutasCostos
 );
 
 const PORT = process.env.PORT || 4000;

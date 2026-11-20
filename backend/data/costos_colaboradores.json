@@ -1,0 +1,32 @@
+[
+  {
+    "id": "70e0f031-b230-452d-b160-6c75cf6437b7",
+    "colaborador_id": "8077953b-b73b-4879-9bfb-df360544231b",
+    "costo_hora": 40,
+    "fecha_inicio": "2026-01-01",
+    "fecha_fin": "2026-10-31",
+    "vigente": false,
+    "registrado_por": "30010fd0-f88b-46e6-80c5-cc574ef7bacd",
+    "registrador": {
+      "id": "30010fd0-f88b-46e6-80c5-cc574ef7bacd",
+      "nombre": "Finanzas Prueba"
+    },
+    "creado_en": "2026-11-20T01:17:56.788Z",
+    "actualizado_en": "2026-11-20T01:17:57.372Z"
+  },
+  {
+    "id": "85f304ec-9671-4750-ac70-6da6c8283d46",
+    "colaborador_id": "8077953b-b73b-4879-9bfb-df360544231b",
+    "costo_hora": 55.5,
+    "fecha_inicio": "2026-11-01",
+    "fecha_fin": null,
+    "vigente": true,
+    "registrado_por": "30010fd0-f88b-46e6-80c5-cc574ef7bacd",
+    "registrador": {
+      "id": "30010fd0-f88b-46e6-80c5-cc574ef7bacd",
+      "nombre": "Finanzas Prueba"
+    },
+    "creado_en": "2026-11-20T01:17:57.372Z",
+    "actualizado_en": "2026-11-20T01:17:57.372Z"
+  }
+]
