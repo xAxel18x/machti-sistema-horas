@@ -15,6 +15,14 @@ function fechaActualPeru() {
   return `${obtener('year')}-${obtener('month')}-${obtener('day')}`;
 }
 
+function sumarUnDia(fechaStr) {
+  if (!fechaStr) return fechaActualPeru();
+  const [y, m, d] = fechaStr.split('-').map(Number);
+  const fecha = new Date(Date.UTC(y, m - 1, d));
+  fecha.setUTCDate(fecha.getUTCDate() + 1);
+  return fecha.toISOString().slice(0, 10);
+}
+
 function formatearFechaVisual(fechaStr) {
   if (!fechaStr || typeof fechaStr !== 'string') return '';
   const partes = fechaStr.split('-');
@@ -61,6 +69,18 @@ export default function GestionCostos() {
   const [historialCargando, setHistorialCargando] = useState(false);
   const [historialItems, setHistorialItems] = useState([]);
   const [errorHistorial, setErrorHistorial] = useState('');
+
+  // Fecha mínima permitida para el input date
+  const fechaMinimaVigencia = useMemo(() => {
+    const hoy = fechaActualPeru();
+    if (!colaboradorSeleccionado?.costo_vigente?.fecha_inicio) {
+      return hoy;
+    }
+    const diaSiguienteActual = sumarUnDia(
+      colaboradorSeleccionado.costo_vigente.fecha_inicio
+    );
+    return diaSiguienteActual > hoy ? diaSiguienteActual : hoy;
+  }, [colaboradorSeleccionado]);
 
   // Cargar lista de colaboradores con su costo vigente
   useEffect(() => {
@@ -134,13 +154,19 @@ export default function GestionCostos() {
 
   // Abrir modal de asignación o actualización
   function abrirModalRegistro(colaborador) {
-    setColaboradorSeleccionado(colaborador);
+    const hoy = fechaActualPeru();
+    let fechaSugerida = hoy;
+
     if (colaborador.costo_vigente) {
       setCostoHora(String(colaborador.costo_vigente.costo_hora));
+      const diaSiguiente = sumarUnDia(colaborador.costo_vigente.fecha_inicio);
+      fechaSugerida = diaSiguiente > hoy ? diaSiguiente : hoy;
     } else {
       setCostoHora('');
     }
-    setFechaInicio(fechaActualPeru());
+
+    setColaboradorSeleccionado(colaborador);
+    setFechaInicio(fechaSugerida);
     setErrorModal('');
     setModalRegistroAbierto(true);
   }
@@ -174,6 +200,26 @@ export default function GestionCostos() {
 
     if (!fechaInicio) {
       setErrorModal('Selecciona la fecha de inicio de vigencia.');
+      return;
+    }
+
+    const hoy = fechaActualPeru();
+    if (fechaInicio < hoy) {
+      setErrorModal(
+        `La fecha de inicio no puede ser anterior a hoy (${formatearFechaVisual(hoy)}).`
+      );
+      return;
+    }
+
+    if (
+      colaboradorSeleccionado.costo_vigente &&
+      fechaInicio <= colaboradorSeleccionado.costo_vigente.fecha_inicio
+    ) {
+      setErrorModal(
+        `La nueva fecha debe ser posterior al inicio de vigencia actual (${formatearFechaVisual(
+          colaboradorSeleccionado.costo_vigente.fecha_inicio
+        )}).`
+      );
       return;
     }
 
@@ -244,7 +290,7 @@ export default function GestionCostos() {
           }}
         >
           <div>
-            <h1>Gestión de costos de personal (HU005)</h1>
+            <h1>Gestión de costos de personal</h1>
             <p>
               Registra los costos internos por hora de cada colaborador y mantén el histórico
               de vigencias para conocer cuánto le cuesta a MACH TI prestar cada servicio.
@@ -517,8 +563,8 @@ export default function GestionCostos() {
             <header className="modal-cabecera">
               <h2 id="modal-costo-titulo">
                 {colaboradorSeleccionado.costo_vigente
-                  ? 'Actualizar costo de personal (Escenario 2)'
-                  : 'Registrar costo por hora (Escenario 1)'}
+                  ? 'Actualizar costo de personal'
+                  : 'Registrar costo por hora'}
               </h2>
               <button
                 type="button"
@@ -532,7 +578,6 @@ export default function GestionCostos() {
             </header>
 
             <form className="modal-cuerpo" onSubmit={guardarCosto}>
-              {/* Contexto del colaborador */}
               <div
                 style={{
                   background: 'var(--fondo)',
@@ -580,7 +625,6 @@ export default function GestionCostos() {
                 )}
               </div>
 
-              {/* Nota explicativa de histórico para Escenario 2 */}
               {colaboradorSeleccionado.costo_vigente && (
                 <div
                   style={{
@@ -593,13 +637,12 @@ export default function GestionCostos() {
                     color: '#0D47A1',
                   }}
                 >
-                  <strong>Regla de histórico (Escenario 2):</strong> Al registrar este nuevo
+                  <strong>Regla de histórico:</strong> Al registrar este nuevo
                   costo, el costo anterior se archivará en el histórico y el nuevo costo regirá a
                   partir de la fecha indicada.
                 </div>
               )}
 
-              {/* Campo Costo */}
               <div className="campo" style={{ marginBottom: '16px' }}>
                 <label htmlFor="input-costo-hora">Costo interno por hora (S/)</label>
                 <input
@@ -618,19 +661,19 @@ export default function GestionCostos() {
                 </span>
               </div>
 
-              {/* Campo Fecha de vigencia */}
               <div className="campo" style={{ marginBottom: '16px' }}>
                 <label htmlFor="input-fecha-vigencia">Fecha de inicio de vigencia</label>
                 <input
                   id="input-fecha-vigencia"
                   type="date"
+                  min={fechaMinimaVigencia}
                   value={fechaInicio}
                   required
                   disabled={guardandoCosto}
                   onChange={(e) => setFechaInicio(e.target.value)}
                 />
                 <span style={{ fontSize: '12px', color: 'var(--suave)' }}>
-                  A partir de esta fecha se aplicará este nuevo costo interno.
+                  Mínimo permitido: {formatearFechaVisual(fechaMinimaVigencia)}.
                 </span>
               </div>
 
