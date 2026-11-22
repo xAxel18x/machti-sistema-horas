@@ -30,6 +30,27 @@ function esFechaValida(valor) {
   );
 }
 
+function fechaActualPeru() {
+  const partes = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Lima',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+
+  const obtener = (tipo) =>
+    partes.find((parte) => parte.type === tipo).value;
+
+  return `${obtener('year')}-${obtener('month')}-${obtener('day')}`;
+}
+
+function formatearFechaVisual(fechaStr) {
+  if (!fechaStr || typeof fechaStr !== 'string') return '';
+  const partes = fechaStr.split('-');
+  if (partes.length !== 3) return fechaStr;
+  return `${partes[2]}/${partes[1]}/${partes[0]}`;
+}
+
 // Funciones para almacenamiento de respaldo (si la tabla aún no se ejecuta en Supabase)
 function asegurarDirectorioData() {
   const dir = path.dirname(FALLBACK_FILE);
@@ -67,7 +88,6 @@ function guardarCostosFallback(datos) {
 // -----------------------------------------------------------------------------
 router.get('/colaboradores', async (req, res) => {
   try {
-    // 1. Obtener colaboradores (consultores y PMs)
     const { data: usuarios, error: errorUsuarios } = await supabase
       .from('usuarios')
       .select('id, nombre, correo, rol')
@@ -79,7 +99,6 @@ router.get('/colaboradores', async (req, res) => {
       return res.status(500).json({ error: 'No se pudieron consultar los colaboradores.' });
     }
 
-    // 2. Intentar consultar costos desde Supabase
     let todosCostos = [];
     let usandoFallback = false;
 
@@ -90,7 +109,6 @@ router.get('/colaboradores', async (req, res) => {
 
     if (errorCostos) {
       if (errorCostos.code === 'PGRST205') {
-        // La tabla aún no existe en Supabase; usar respaldo local
         usandoFallback = true;
         todosCostos = leerCostosFallback();
       } else {
@@ -101,13 +119,11 @@ router.get('/colaboradores', async (req, res) => {
       todosCostos = costosDb || [];
     }
 
-    // 3. Mapear cada colaborador con su costo vigente e histórico
     const resultado = (usuarios || []).map((colaborador) => {
       const historicoColaborador = todosCostos.filter(
         (c) => c.colaborador_id === colaborador.id
       );
 
-      // El vigente es el marcado con vigente = true o el más reciente activo
       const costoVigente = historicoColaborador.find((c) => c.vigente === true) || null;
 
       return {
@@ -151,7 +167,6 @@ router.get('/colaboradores/:colaboradorId/historial', async (req, res) => {
   }
 
   try {
-    // 1. Verificar colaborador
     const { data: colaborador, error: errorColaborador } = await supabase
       .from('usuarios')
       .select('id, nombre, correo, rol')
@@ -166,7 +181,6 @@ router.get('/colaboradores/:colaboradorId/historial', async (req, res) => {
       return res.status(404).json({ error: 'El colaborador no existe.' });
     }
 
-    // 2. Consultar histórico de costos
     let historial = [];
 
     const { data: costosDb, error: errorCostos } = await supabase
@@ -252,6 +266,14 @@ router.post('/colaboradores/:colaboradorId', async (req, res) => {
     });
   }
 
+  // Bloquear fechas pasadas
+  const hoyPeru = fechaActualPeru();
+  if (fecha_inicio < hoyPeru) {
+    return res.status(400).json({
+      error: `La fecha de inicio de vigencia no puede ser anterior a hoy (${formatearFechaVisual(hoyPeru)}).`,
+    });
+  }
+
   try {
     // 1. Verificar que el colaborador exista en la tabla usuarios
     const { data: colaborador, error: errorColaborador } = await supabase
@@ -273,7 +295,7 @@ router.post('/colaboradores/:colaboradorId', async (req, res) => {
     let esHistorico = false;
     let costoGuardado = null;
 
-    // 2. Intentar en Supabase
+    // 2. Consultar costo vigente actual
     const { data: costoVigenteActual, error: errorConsultaVigente } = await supabase
       .from('costos_colaboradores')
       .select('id, costo_hora, fecha_inicio, fecha_fin, vigente')
@@ -287,9 +309,16 @@ router.post('/colaboradores/:colaboradorId', async (req, res) => {
     }
 
     if (!errorConsultaVigente) {
-      // Supabase está disponible
-      // Escenario 2: Si ya tiene un costo vigente, archivarlo en el histórico
+      // Escenario 2: Si ya tiene un costo vigente, validar cronología y archivarlo
       if (costoVigenteActual) {
+        if (fecha_inicio <= costoVigenteActual.fecha_inicio) {
+          return res.status(400).json({
+            error: `La nueva fecha de vigencia debe ser posterior al inicio del costo actual (${formatearFechaVisual(
+              costoVigenteActual.fecha_inicio
+            )}).`,
+          });
+        }
+
         esHistorico = true;
 
         // Calcular fecha_fin del costo anterior: día anterior al nuevo inicio
@@ -302,9 +331,7 @@ router.post('/colaboradores/:colaboradorId', async (req, res) => {
           .from('costos_colaboradores')
           .update({
             vigente: false,
-            fecha_fin: fechaFinAnterior < costoVigenteActual.fecha_inicio
-              ? fecha_inicio
-              : fechaFinAnterior,
+            fecha_fin: fechaFinAnterior,
             actualizado_en: ahoraIso,
           })
           .eq('id', costoVigenteActual.id);
@@ -338,7 +365,7 @@ router.post('/colaboradores/:colaboradorId', async (req, res) => {
 
       costoGuardado = nuevoCosto;
 
-      // Sincronizar consultores_asignados para que refleje el costo actualizado
+      // Sincronizar consultores_asignados
       await supabase
         .from('consultores_asignados')
         .update({ costo_interno_hora: cantidadCosto })
@@ -352,8 +379,17 @@ router.post('/colaboradores/:colaboradorId', async (req, res) => {
       );
 
       if (costoAnteriorIndex >= 0) {
-        esHistorico = true;
         const costoAnterior = todosCostos[costoAnteriorIndex];
+
+        if (fecha_inicio <= costoAnterior.fecha_inicio) {
+          return res.status(400).json({
+            error: `La nueva fecha de vigencia debe ser posterior al inicio del costo actual (${formatearFechaVisual(
+              costoAnterior.fecha_inicio
+            )}).`,
+          });
+        }
+
+        esHistorico = true;
 
         const [y, m, d] = fecha_inicio.split('-').map(Number);
         const fechaAnt = new Date(Date.UTC(y, m - 1, d));
@@ -363,9 +399,7 @@ router.post('/colaboradores/:colaboradorId', async (req, res) => {
         todosCostos[costoAnteriorIndex] = {
           ...costoAnterior,
           vigente: false,
-          fecha_fin: fechaFinAnterior < costoAnterior.fecha_inicio
-            ? fecha_inicio
-            : fechaFinAnterior,
+          fecha_fin: fechaFinAnterior,
           actualizado_en: ahoraIso,
         };
       }
@@ -387,7 +421,6 @@ router.post('/colaboradores/:colaboradorId', async (req, res) => {
       todosCostos.push(costoGuardado);
       guardarCostosFallback(todosCostos);
 
-      // Intentar sincronizar en consultores_asignados
       try {
         await supabase
           .from('consultores_asignados')
